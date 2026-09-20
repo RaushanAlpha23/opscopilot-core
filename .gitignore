@@ -13,3 +13,9 @@ htmlcov/
 .env
 data/
 *.json.index
+
+# local debugging scripts and their output
+/test_gemini.py
+/inspect_chunks.py
+/trace_run.py
+/trace_report.txt

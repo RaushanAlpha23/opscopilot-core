@@ -42,3 +42,18 @@ def test_repository_walk_skips_vendored_directories(tmp_path):
     vendored.mkdir(parents=True)
     (vendored / "index.js").write_text("function b(){}\n")
     assert {c.file_path for c in chunk_repository(tmp_path)} == {"app.py"}
+
+
+def test_python_with_invalid_escapes_does_not_emit_warnings():
+    import warnings
+
+    from opscopilot.retrieval.chunking import chunk_python
+
+    # The repo being indexed is user code; its invalid escapes must not leak
+    # SyntaxWarning("<unknown>:N ...") into the host application's output.
+    source = 'import re\n\n\ndef f():\n    return re.compile("\\W+")\n'
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        chunks = chunk_python(source, "app/bad_escape.py")
+    assert not [w for w in caught if issubclass(w.category, SyntaxWarning)]
+    assert any(c.symbol_name == "f" for c in chunks)  # parsed as Python, not fallback

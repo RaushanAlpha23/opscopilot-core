@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..exceptions import ConfigurationError, MissingDependencyError
 from .base import Image
+from .retry import RetryPolicy
 
 if TYPE_CHECKING:
     from openai.types.chat import ChatCompletionUserMessageParam
@@ -14,7 +15,13 @@ if TYPE_CHECKING:
 class OpenAIProvider:
     name = "openai"
 
-    def __init__(self, model: str = "gpt-4o-mini", api_key: str = "", timeout: int = 60):
+    def __init__(
+        self,
+        model: str = "gpt-4o-mini",
+        api_key: str = "",
+        timeout: int = 60,
+        retry: RetryPolicy | None = None,
+    ):
         if not api_key:
             raise ConfigurationError(
                 "An OpenAI API key is required. Set OPSCOPILOT_OPENAI_API_KEY "
@@ -26,7 +33,9 @@ class OpenAIProvider:
             raise MissingDependencyError("openai", "openai") from exc
 
         self.model = model
-        self._client = OpenAI(api_key=api_key, timeout=timeout)
+        self._retry = retry or RetryPolicy()
+        # max_retries=0: the SDK's own (2-try) retry would multiply with ours.
+        self._client = OpenAI(api_key=api_key, timeout=timeout, max_retries=0)
 
     @property
     def supports_vision(self) -> bool:
@@ -53,9 +62,12 @@ class OpenAIProvider:
             "content": content,  # type: ignore[typeddict-item]
         }
 
-        response = self._client.chat.completions.create(
-            model=self.model,
-            temperature=temperature,
-            messages=[message],
+        response = self._retry.call(
+            "openai",
+            lambda: self._client.chat.completions.create(
+                model=self.model,
+                temperature=temperature,
+                messages=[message],
+            ),
         )
         return (response.choices[0].message.content or "").strip()

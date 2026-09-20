@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opscopilot-core"
-version = "0.2.2"
+version = "0.2.3"
 description = "An agentic SRE engine: screenshot-grounded bug triage, code-aware RAG diagnosis, and human-in-the-loop remediation."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,6 +35,7 @@ dependencies = [
 [project.optional-dependencies]
 mistral = ["langchain-mistralai>=0.2", "langchain-core>=0.3"]
 openai = ["openai>=1.30"]
+gemini = ["google-genai>=1.0"]
 qdrant = ["qdrant-client>=1.9"]
 redis = ["redis>=5.0"]
 local-embeddings = ["sentence-transformers>=3.0"]
@@ -45,6 +46,7 @@ all = [
   "langchain-mistralai>=0.2",
   "langchain-core>=0.3",
   "openai>=1.30",
+  "google-genai>=1.0",
   "qdrant-client>=1.9",
   "redis>=5.0",
   "sentence-transformers>=3.0",

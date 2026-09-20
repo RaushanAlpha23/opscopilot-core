@@ -32,6 +32,39 @@ class ProviderError(OpsCopilotError):
     """The upstream LLM/embedding provider failed or returned something unusable."""
 
 
+class RateLimitError(ProviderError):
+    """The provider kept answering HTTP 429, or told us retrying cannot help."""
+
+    def __init__(
+        self,
+        provider: str,
+        attempts: int,
+        detail: str | None = None,
+        *,
+        quota_exhausted: bool = False,
+    ) -> None:
+        if quota_exhausted:
+            message = (
+                f"{provider} quota exhausted; retrying will not help until it resets. "
+                "Gemini daily quotas reset at midnight Pacific time. Wait for the reset, "
+                "enable billing / move to a higher tier, or switch to another model."
+            )
+        else:
+            message = (
+                f"{provider} rate limit exceeded after {attempts} attempts. Slow the pipeline "
+                "down (set OPSCOPILOT_MIN_SECONDS_BETWEEN_CALLS), lower code_top_k / "
+                "max_chunk_chars to send fewer tokens, or check your plan's limits in the "
+                "provider console."
+            )
+        if detail:
+            message += f" Provider said: {detail}"
+        super().__init__(message)
+        self.provider = provider
+        self.attempts = attempts
+        self.detail = detail
+        self.quota_exhausted = quota_exhausted
+
+
 class InvalidJSONResponse(ProviderError):
     """A model was asked for JSON and did not produce parseable JSON."""
 

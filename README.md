@@ -45,7 +45,7 @@ if state.status is IncidentStatus.awaiting_evidence:
 ### From the command line
 
 ```bash
-export OPSCOPILOT_MISTRAL_API_KEY=...
+export OPSCOPILOT_MISTRAL_API_KEY=...      # or OPSCOPILOT_OPENAI_API_KEY / OPSCOPILOT_GEMINI_API_KEY
 
 opscopilot --vector-store memory://./index.json index ./my_app
 opscopilot submit --note "cart total is NaN" --screenshot bug.png
@@ -87,11 +87,13 @@ Every backend is chosen by a string, so swapping one is a config change rather t
 
 | Setting | Env var | Default | Options |
 |---|---|---|---|
-| `llm` | `OPSCOPILOT_LLM` | `mistral:mistral-small-latest` | `mistral:*`, `openai:*`, `fake:*` |
+| `llm` | `OPSCOPILOT_LLM` | `mistral:mistral-small-latest` | `mistral:*`, `openai:*`, `gemini:*`, `fake:*` |
 | `vision_llm` | `OPSCOPILOT_VISION_LLM` | falls back to `llm` | same |
 | `embeddings` | `OPSCOPILOT_EMBEDDINGS` | `hash:384` | `hash:N`, `st:<model>`, `openai:<model>` |
 | `vector_store` | `OPSCOPILOT_VECTOR_STORE` | `memory://` | `memory://`, `memory://path.json`, `http://host:6333` |
 | `state_store` | `OPSCOPILOT_STATE_STORE` | `memory://` | `memory://`, `redis://host:6379/0` |
+| `llm_max_attempts` | `OPSCOPILOT_LLM_MAX_ATTEMPTS` | `6` | HTTP attempts per LLM call on 429/5xx, with exponential backoff (honours `Retry-After`) |
+| `min_seconds_between_calls` | `OPSCOPILOT_MIN_SECONDS_BETWEEN_CALLS` | `0` | client-side pacing. Set to `60 / your requests-per-minute limit + 1` on free tiers |
 | `confidence_threshold` | `OPSCOPILOT_CONFIDENCE_THRESHOLD` | `0.6` | |
 | `max_evidence_rounds` | `OPSCOPILOT_MAX_EVIDENCE_ROUNDS` | `2` | questions asked before proceeding anyway |
 | `github_token` / `github_repo` | `OPSCOPILOT_GITHUB_TOKEN` / `_REPO` | unset | ticketing is skipped when unset |
@@ -116,6 +118,13 @@ pip install 'opscopilot-core[mistral,qdrant,redis,local-embeddings,github]'
 
 `memory://` holds the index in the process. Use `memory://./index.json` to persist across CLI invocations, or Qdrant for anything concurrent.
 
+### Rate limits (HTTP 429)
+
+Every provider call goes through one retry policy: 429 and 5xx responses are retried with
+exponential backoff, and the server's own wait hint is honoured. A per-day or zero quota fails
+immediately with a `RateLimitError` that names the quota, because waiting a minute cannot fix it.
+On free tiers, set `min_seconds_between_calls` so a run stays under your per-minute limit.
+
 ---
 
 ## Extras
@@ -124,6 +133,7 @@ pip install 'opscopilot-core[mistral,qdrant,redis,local-embeddings,github]'
 |---|---|---|
 | `mistral` | `langchain-mistralai` | Mistral models (incl. vision) |
 | `openai` | `openai` | OpenAI chat + embeddings |
+| `gemini` | `google-genai` | Google Gemini models (incl. vision) |
 | `qdrant` | `qdrant-client` | Qdrant vector store |
 | `redis` | `redis` | durable incident state |
 | `local-embeddings` | `sentence-transformers` | local semantic embeddings (pulls torch) |

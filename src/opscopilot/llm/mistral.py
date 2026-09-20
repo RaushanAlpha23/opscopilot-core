@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..exceptions import ConfigurationError, MissingDependencyError, ProviderError
 from .base import Image
+from .retry import RetryPolicy
 
 if TYPE_CHECKING:
     from langchain_mistralai import ChatMistralAI
@@ -16,7 +17,13 @@ _VISION_MODELS = ("mistral-small", "mistral-medium", "mistral-large", "pixtral")
 class MistralProvider:
     name = "mistral"
 
-    def __init__(self, model: str = "mistral-small-latest", api_key: str = "", timeout: int = 60):
+    def __init__(
+        self,
+        model: str = "mistral-small-latest",
+        api_key: str = "",
+        timeout: int = 60,
+        retry: RetryPolicy | None = None,
+    ):
         if not api_key:
             raise ConfigurationError(
                 "A Mistral API key is required. Set OPSCOPILOT_MISTRAL_API_KEY "
@@ -30,6 +37,7 @@ class MistralProvider:
         self.model = model
         self._api_key = api_key
         self._timeout = timeout
+        self._retry = retry or RetryPolicy()
         self._cache: dict[float, ChatMistralAI] = {}
 
     @property
@@ -73,7 +81,10 @@ class MistralProvider:
                 {"type": "image_url", "image_url": image.data_url},
             ]
 
-        response = self._client(temperature).invoke([HumanMessage(content=content)])
+        response = self._retry.call(
+            "mistral",
+            lambda: self._client(temperature).invoke([HumanMessage(content=content)]),
+        )
         text = response.content
         if isinstance(text, list):  # some versions return content blocks
             text = "".join(part.get("text", "") for part in text if isinstance(part, dict))
