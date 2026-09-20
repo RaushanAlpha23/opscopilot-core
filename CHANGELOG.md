@@ -3,10 +3,25 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-# Changelog
+## [0.2.3]
 
-All notable changes to this project are documented here.
-This project adheres to [Semantic Versioning](https://semver.org/).
+### Added
+- Google Gemini provider: `llm="gemini:<model>"`, key via `OPSCOPILOT_GEMINI_API_KEY`
+  (`pip install "opscopilot-core[gemini]"`).
+- `RateLimitError` (a `ProviderError`) raised when a provider keeps answering HTTP 429.
+- Settings `llm_max_attempts` (default 6) and `min_seconds_between_calls` (default 0.0).
+
+### Fixed
+- Indexing no longer prints `<unknown>:N: SyntaxWarning: invalid escape sequence` for Python files
+  in the repository being indexed (those are the user's own files, not opscopilot's).
+- HTTP 429 / 5xx from Mistral, OpenAI and Gemini are now retried with exponential
+  backoff that honours `Retry-After`, instead of failing the incident on the first hit.
+  `langchain-mistralai` only retries connection errors, never 429s.
+- Gemini's own wait hint (`retryDelay` / "retry in Ns") is honoured, and 429s caused by a per-day or
+  zero quota fail immediately with the quota name in the error instead of retrying for a minute.
+- Retry log lines and `RateLimitError` now include the provider's quota id/limit.
+- Gemini: silenced google-genai's per-call automatic-function-calling warning.
+- OpenAI 429s caused by exhausted credit (`insufficient_quota`) fail fast instead of retrying.
 
 ## [0.2.2]
 

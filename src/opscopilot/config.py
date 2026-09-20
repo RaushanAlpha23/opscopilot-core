@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     mistral_api_key: str = ""
     openai_api_key: str = ""
+    gemini_api_key: str = ""
 
     # --- Vector store ---
     # "memory://" needs no infrastructure at all, which is what makes the
@@ -60,7 +61,9 @@ class Settings(BaseSettings):
     schema_top_k: int = 3
     max_chunk_chars: int = 1200
     request_timeout_seconds: int = 60
-    max_retries: int = 2
+    max_retries: int = 2  # re-prompts when the model returns malformed JSON
+    llm_max_attempts: int = 6  # HTTP attempts per LLM call on 429/5xx, with backoff
+    min_seconds_between_calls: float = 0.0  # client-side pacing; raise on free tiers
 
     @property
     def effective_vision_llm(self) -> str:

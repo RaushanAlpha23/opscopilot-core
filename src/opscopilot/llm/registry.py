@@ -5,8 +5,9 @@ from __future__ import annotations
 from ..config import Settings
 from ..exceptions import ConfigurationError
 from .base import LLMProvider
+from .retry import RetryPolicy
 
-_KNOWN = ("mistral", "openai", "fake")
+_KNOWN = ("mistral", "openai", "gemini", "fake")
 
 
 def parse_spec(spec: str) -> tuple[str, str]:
@@ -27,6 +28,10 @@ def parse_spec(spec: str) -> tuple[str, str]:
 
 def build_llm(spec: str, settings: Settings) -> LLMProvider:
     provider, model = parse_spec(spec)
+    retry = RetryPolicy(
+        max_attempts=settings.llm_max_attempts,
+        min_interval=settings.min_seconds_between_calls,
+    )
 
     if provider == "mistral":
         from .mistral import MistralProvider
@@ -35,6 +40,7 @@ def build_llm(spec: str, settings: Settings) -> LLMProvider:
             model=model,
             api_key=settings.mistral_api_key,
             timeout=settings.request_timeout_seconds,
+            retry=retry,
         )
 
     if provider == "openai":
@@ -44,6 +50,17 @@ def build_llm(spec: str, settings: Settings) -> LLMProvider:
             model=model,
             api_key=settings.openai_api_key,
             timeout=settings.request_timeout_seconds,
+            retry=retry,
+        )
+
+    if provider == "gemini":
+        from .gemini import GeminiProvider
+
+        return GeminiProvider(
+            model=model or "gemini-flash-latest",
+            api_key=settings.gemini_api_key,
+            timeout=settings.request_timeout_seconds,
+            retry=retry,
         )
 
     from .fake import FakeLLM

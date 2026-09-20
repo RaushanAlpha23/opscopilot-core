@@ -30,6 +30,7 @@ from .exceptions import (
     MissingDependencyError,
     OpsCopilotError,
     ProviderError,
+    RateLimitError,
     RetrievalError,
     StateNotFoundError,
     TicketingError,
@@ -49,7 +50,7 @@ from .models import (
     VisionAnalysis,
 )
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 __all__ = [
     "__version__",
@@ -76,6 +77,7 @@ __all__ = [
     "ConfigurationError",
     "MissingDependencyError",
     "ProviderError",
+    "RateLimitError",
     "InvalidJSONResponse",
     "RetrievalError",
     "StateNotFoundError",

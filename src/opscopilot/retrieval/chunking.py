@@ -18,6 +18,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import re
+import warnings
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -81,7 +82,13 @@ def _make(text: str, file_path: str, language: str, chunk_type: str,
 
 def chunk_python(source: str, file_path: str) -> list[CodeChunk]:
     try:
-        tree = ast.parse(source)
+        # We are parsing the *user's* repository, not our own code. Their invalid
+        # escapes ("\\W" in a non-raw string) make the parser emit SyntaxWarning
+        # with filename "<unknown>". That is noise for us, and unactionable
+        # without a filename, so silence it and name the file for real errors.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tree = ast.parse(source, filename=file_path)
     except SyntaxError:
         return chunk_fallback(source, file_path, "python")
 
